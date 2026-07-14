@@ -21,7 +21,16 @@
     padding:18px 28px; border-bottom:1px solid var(--line);
     display:flex; align-items:center; justify-content:space-between; gap:16px;
     background:linear-gradient(180deg,#101318,#0a0c0f);
+    position:sticky; top:0; z-index:60;
   }
+  .accordionHead{position:relative;}
+  .panelClear{
+    background:none;border:1px solid var(--line-soft);color:var(--muted2);
+    padding:3px 9px;border-radius:999px;font-family:'Oswald';text-transform:uppercase;
+    font-size:10px;letter-spacing:.08em;cursor:pointer;margin-left:auto;margin-right:10px;
+    transition:border-color .15s,color .15s;
+  }
+  .panelClear:hover{border-color:var(--danger);color:var(--danger);}
   header.top h1{font-size:20px;margin:0;font-weight:700;letter-spacing:0.08em;color:var(--text);}
   header.top .tag{color:var(--muted);font-size:12px;letter-spacing:0.12em;margin-top:2px;font-family:'Inter';text-transform:none;}
   header.top .reset{
@@ -83,6 +92,40 @@
   .fsToast.ok{border-left-color:var(--good);}
   .fsState{padding:40px 24px;text-align:center;color:var(--muted);font-size:13px;width:100%;}
   .fsState.err{color:var(--danger);}
+  /* Phase 3 windows: vendors + activities */
+  .fsBodyCol{flex-direction:column;overflow-y:auto;padding:0;background:var(--bg);}
+  .eventBar{display:flex;flex-wrap:wrap;gap:10px;padding:14px 20px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#141821,#0e1116);}
+  .eventPill{display:flex;align-items:center;gap:8px;padding:8px 14px;border:1px solid var(--gold);border-radius:999px;background:rgba(212,175,55,.08);color:var(--gold);font-family:'Oswald';text-transform:uppercase;font-size:12px;letter-spacing:.06em;}
+  .eventPill.iron{border-color:var(--arc);color:var(--arc);background:rgba(82,217,255,.08);}
+  .eventPill.trials{border-color:var(--solar);color:var(--solar);background:rgba(255,140,66,.08);}
+  .resetChips{display:flex;flex-wrap:wrap;gap:10px;padding:12px 20px;border-bottom:1px solid var(--line-soft);}
+  .resetChip{font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:7px 12px;}
+  .resetChip b{color:var(--text);font-family:'JetBrains Mono';}
+  .actGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;padding:16px 20px 40px;}
+  .actCard{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel);display:flex;flex-direction:column;}
+  .actCard .head{display:flex;gap:10px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line-soft);background:var(--panel2);}
+  .actCard .head img{width:40px;height:40px;border-radius:4px;flex-shrink:0;}
+  .actCard .head .nm{font-family:'Oswald';text-transform:uppercase;letter-spacing:.04em;font-size:14px;color:var(--text);line-height:1.15;}
+  .actCard .head .tag{font-size:10px;letter-spacing:.1em;text-transform:uppercase;}
+  .actCard .body{padding:10px 14px 14px;}
+  .actCard .desc{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:8px;}
+  .actCard .rw{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text);margin-top:5px;}
+  .actCard .rw img{width:26px;height:26px;border-radius:3px;}
+  .actCard .rwLabel{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted2);margin:8px 0 3px;}
+  .tagWeekly{color:var(--void);} .tagDaily{color:var(--arc);} .tagSpecial{color:var(--gold);}
+  .venVendor{border-bottom:1px solid var(--line);padding:16px 20px;}
+  .venHead{display:flex;gap:12px;align-items:center;margin-bottom:12px;}
+  .venHead img{width:48px;height:48px;border-radius:6px;}
+  .venHead .nm{font-family:'Oswald';text-transform:uppercase;letter-spacing:.05em;font-size:17px;color:var(--text);}
+  .venHead .sub{font-size:11px;color:var(--muted);}
+  .venItems{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;}
+  .venItem{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:6px;padding:8px 10px;background:var(--panel2);}
+  .venItem img.ic{width:42px;height:42px;border-radius:4px;flex-shrink:0;}
+  .venItem.exotic{border-color:#ceae33;}
+  .venItem .nm{font-size:12px;color:var(--text);line-height:1.2;}
+  .venItem .typ{font-size:10px;color:var(--muted2);}
+  .venItem .cost{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--gold);margin-top:3px;}
+  .venItem .cost img{width:15px;height:15px;border-radius:2px;}
   @media (max-width:820px){
     .fsBody{flex-direction:column;overflow-x:hidden;}
     .fsStore{min-width:0;}
@@ -226,6 +269,33 @@
     <button class="fsClose" id="fsCloseBtn" title="Close" data-testid="vault-close-btn">&times;</button>
   </div>
   <div class="fsBody" id="fsBody" data-testid="vault-body"></div>
+</div>
+
+<!-- Phase 3: Vendor Inventories window -->
+<div class="fsOverlay" id="vendorsOverlay" data-testid="vendors-overlay">
+  <div class="fsHead">
+    <div>
+      <h2>Vendor Inventories</h2>
+      <div class="sub" id="vendorsReset">Live vendor sales</div>
+    </div>
+    <input class="fsSearch" id="vendorsSearch" type="text" placeholder="Search items..." data-testid="vendors-search-input" />
+    <button class="fsReload" id="vendorsReloadBtn" data-testid="vendors-reload-btn">Reload</button>
+    <button class="fsClose" id="vendorsCloseBtn" title="Close" data-testid="vendors-close-btn">&times;</button>
+  </div>
+  <div class="fsBody fsBodyCol" id="vendorsBody" data-testid="vendors-body"></div>
+</div>
+
+<!-- Phase 3: Daily & Weekly Activities window -->
+<div class="fsOverlay" id="activitiesOverlay" data-testid="activities-overlay">
+  <div class="fsHead">
+    <div>
+      <h2>Daily &amp; Weekly Activities</h2>
+      <div class="sub" id="activitiesReset">Milestones &amp; rewards</div>
+    </div>
+    <button class="fsReload" id="activitiesReloadBtn" data-testid="activities-reload-btn">Reload</button>
+    <button class="fsClose" id="activitiesCloseBtn" title="Close" data-testid="activities-close-btn">&times;</button>
+  </div>
+  <div class="fsBody fsBodyCol" id="activitiesBody" data-testid="activities-body"></div>
 </div>
 
 <div class="layout">
@@ -2224,8 +2294,8 @@ const state = {
   // +1 per level, up to +5 each at level 5 (it NO LONGER affects mod energy).
   // Real per-item rolls aren't modeled, so you pick which 3 stats benefit.
   armorMasterwork: {
-    Helmet: {level:5, stats:[]}, Arms: {level:5, stats:[]}, Chest: {level:5, stats:[]},
-    Legs: {level:5, stats:[]}, ClassItem: {level:5, stats:[]},
+    Helmet: {level:0, stats:[]}, Arms: {level:0, stats:[]}, Chest: {level:0, stats:[]},
+    Legs: {level:0, stats:[]}, ClassItem: {level:0, stats:[]},
   },
 };
 
@@ -2248,7 +2318,7 @@ function resetState(){
   state.artifact=null; state.artifactPerks=[];
   state.armorSetByPiece={Helmet:null,Arms:null,Chest:null,Legs:null,ClassItem:null};
   state.armorTier={Helmet:5,Arms:5,Chest:5,Legs:5,ClassItem:5};
-  state.armorMasterwork={Helmet:{level:5,stats:[]},Arms:{level:5,stats:[]},Chest:{level:5,stats:[]},Legs:{level:5,stats:[]},ClassItem:{level:5,stats:[]}};
+  state.armorMasterwork={Helmet:{level:0,stats:[]},Arms:{level:0,stats:[]},Chest:{level:0,stats:[]},Legs:{level:0,stats:[]},ClassItem:{level:0,stats:[]}};
   render();
 }
 
@@ -2461,11 +2531,30 @@ function makePanel(id, headerHTML){
   const header = el('div','accordionHead');
   header.id = 'panelHead_'+id;
   header.appendChild(el('h2','', headerHTML));
+  const clearBtn = el('button','panelClear','Clear');
+  clearBtn.setAttribute('data-testid','clear-panel-'+id);
+  clearBtn.title = 'Clear this section without resetting the whole build';
+  clearBtn.onclick = (e)=>{ e.stopPropagation(); clearPanel(id); };
+  header.appendChild(clearBtn);
   const chev = el('span','chev'+(panelCollapsed[id]?'':' open'), '&#9656;');
   header.appendChild(chev);
   header.onclick = ()=>{ panelCollapsed[id] = !panelCollapsed[id]; render(); };
   const body = el('div','panel'+(panelCollapsed[id]?' collapsed':''));
   return {header, body};
+}
+// QoL: clear just one section's selections on the fly, instead of scrolling
+// up to Reset Build and starting the whole loadout over.
+function clearPanel(id){
+  switch(id){
+    case 'p1': state.aspects=[]; state.fragments=[]; state.grenade=null; state.melee=null; state.super=defaultSuperFor(state.cls,state.element); break;
+    case 'p2': state.exoticArmor=null; state.classItemPerks={col1:null,col2:null}; break;
+    case 'p3': state.activeExoticWeapon=null; break;
+    case 'p4': state.legendary={Kinetic:null,Energy:null,Power:null}; break;
+    case 'p5': state.mods={Helmet:[],Arms:[],Chest:[],Legs:[],ClassItem:[]}; state.tuning={Helmet:null,Arms:null,Chest:null,Legs:null,ClassItem:null}; break;
+    case 'p6': state.artifact=null; state.artifactPerks=[]; break;
+    case 'p7': state.armorSetByPiece={Helmet:null,Arms:null,Chest:null,Legs:null,ClassItem:null}; break;
+  }
+  render();
 }
 function openPanel(id){
   panelCollapsed[id] = false;
@@ -4077,6 +4166,22 @@ function renderSyncPanel(){
   vaultViewRow.onclick = ()=>{ closeDrawer(); openFullScreenVault(); };
   col.appendChild(vaultViewRow);
 
+  // ---- Vendor Inventories (full-screen window) ----
+  const vendorsRow = el('div','drawerRow');
+  vendorsRow.setAttribute('data-testid','open-vendors-row');
+  vendorsRow.appendChild(el('span','rowLabel','Vendor Inventories'));
+  vendorsRow.appendChild(el('span','rowChev','&#10095;'));
+  vendorsRow.onclick = ()=>{ closeDrawer(); openVendorsWindow(); };
+  col.appendChild(vendorsRow);
+
+  // ---- Daily & Weekly Activities (full-screen window) ----
+  const activitiesRow = el('div','drawerRow');
+  activitiesRow.setAttribute('data-testid','open-activities-row');
+  activitiesRow.appendChild(el('span','rowLabel','Daily & Weekly Activities'));
+  activitiesRow.appendChild(el('span','rowChev','&#10095;'));
+  activitiesRow.onclick = ()=>{ closeDrawer(); openActivitiesWindow(); };
+  col.appendChild(activitiesRow);
+
   // ---- Sign in with Bungie (OAuth) — accordion row ----
   const signinRow = el('div','drawerRow');
   const storedAuth = getStoredAuth();
@@ -4459,6 +4564,298 @@ document.getElementById('fsReloadBtn').onclick = ()=>{ fsState.stores=null; load
 document.getElementById('fsSearchInput').addEventListener('input', (e)=>{ fsState.search = e.target.value.trim(); renderFsBody(); });
 document.addEventListener('click', (e)=>{ const m = document.getElementById('fsMenu'); if(m && !m.contains(e.target)) closeFsMenu(); });
 document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && fsOverlay.classList.contains('open')) closeFullScreenVault(); });
+
+/* =========================================================================
+   PHASE 3 — VENDOR INVENTORIES + DAILY/WEEKLY ACTIVITIES WINDOWS
+   Activities are powered by the PUBLIC Milestones endpoint (no auth needed),
+   so they work signed-out. Vendors use GetVendors (components 400+402) and
+   require the signed-in session + ReadDestinyVendorsAndAdvisors scope.
+   Daily reset = 17:00 UTC; weekly reset = Tuesday 17:00 UTC; Trials runs the
+   weekend (Fri 17:00 UTC -> Tue 17:00 UTC). Iron Banner / Trials are also
+   surfaced from live milestone data when active.
+   ========================================================================= */
+
+// Generic (non-item) manifest entity fetch, cached in memory (kept out of the
+// persisted item cache to avoid bloating localStorage with big definitions).
+const manifestEntityCache = {};
+const __entInFlight = {};
+async function getManifestEntity(type, hash){
+  const key = type+':'+hash;
+  if(manifestEntityCache[key]) return manifestEntityCache[key];
+  if(__entInFlight[key]) return __entInFlight[key];
+  __entInFlight[key] = (async ()=>{
+    try { const def = await bungieGet(`/Destiny2/Manifest/${type}/${hash}/`); manifestEntityCache[key]=def; return def; }
+    finally { delete __entInFlight[key]; }
+  })();
+  return __entInFlight[key];
+}
+
+// ---- Reset / event timing (all anchored to 17:00 UTC) ----
+function nextDailyReset(){
+  const now = new Date();
+  const r = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 17,0,0));
+  if(r <= now) r.setUTCDate(r.getUTCDate()+1);
+  return r;
+}
+function nextWeeklyReset(){ // Tuesday (UTC day 2) at 17:00 UTC
+  const now = new Date();
+  const r = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 17,0,0));
+  while(r.getUTCDay()!==2 || r<=now){ r.setUTCDate(r.getUTCDate()+1); }
+  return r;
+}
+function fmtCountdown(target){
+  let ms = target - new Date();
+  if(ms < 0) ms = 0;
+  const d=Math.floor(ms/86400000); ms-=d*86400000;
+  const h=Math.floor(ms/3600000); ms-=h*3600000;
+  const m=Math.floor(ms/60000);
+  return (d?d+'d ':'') + h + 'h ' + m + 'm';
+}
+function isTrialsWeekend(){
+  const now = new Date(); const day = now.getUTCDay(); const h = now.getUTCHours();
+  if(day===5) return h>=17;                 // Friday after reset
+  if(day===6 || day===0 || day===1) return true; // Sat/Sun/Mon
+  if(day===2) return h<17;                   // Tuesday before reset
+  return false;
+}
+function trialsEnds(){ return nextWeeklyReset(); } // Trials ends at weekly reset
+
+// Only one full-screen overlay open at a time.
+function closeAllOverlays(){
+  ['vaultFsOverlay','vendorsOverlay','activitiesOverlay'].forEach(id=>{
+    const o = document.getElementById(id); if(o) o.classList.remove('open');
+  });
+  closeFsMenu();
+}
+
+/* ---------------- ACTIVITIES WINDOW ---------------- */
+const activitiesOverlay = document.getElementById('activitiesOverlay');
+function openActivitiesWindow(){
+  closeAllOverlays();
+  activitiesOverlay.classList.add('open');
+  document.body.style.overflow='hidden';
+  loadActivities();
+}
+function closeActivitiesWindow(){ activitiesOverlay.classList.remove('open'); document.body.style.overflow=''; }
+
+const MILESTONE_TYPE = {1:{n:'Tutorial'},2:{n:'One Time'},3:{n:'Weekly',cls:'tagWeekly'},4:{n:'Daily',cls:'tagDaily'},5:{n:'Special',cls:'tagSpecial'}};
+
+async function loadActivities(){
+  const body = document.getElementById('activitiesBody');
+  body.innerHTML = '';
+  body.appendChild(el('div','fsState','Fetching public milestones from Bungie.net...'));
+  document.getElementById('activitiesReset').textContent =
+    `Daily reset in ${fmtCountdown(nextDailyReset())} \u2022 Weekly reset (Tue) in ${fmtCountdown(nextWeeklyReset())}`;
+  try {
+    const ms = await bungieGet('/Destiny2/Milestones/');
+    const entries = Object.keys(ms);
+    const cards = [];
+    await Promise.all(entries.map(async (hash)=>{
+      try {
+        const def = await getManifestEntity('DestinyMilestoneDefinition', hash);
+        if(!def || !def.displayProperties || !def.displayProperties.name) return;
+        // gather reward item hashes from the milestone definition
+        const rewardItemHashes = [];
+        if(def.rewards){
+          Object.values(def.rewards).forEach(cat=>{
+            Object.values(cat.rewardEntries||{}).forEach(en=>{
+              (en.items||[]).forEach(it=>{ if(it.itemHash) rewardItemHashes.push(it.itemHash); });
+            });
+          });
+        }
+        cards.push({
+          hash,
+          name: def.displayProperties.name,
+          desc: def.displayProperties.description || '',
+          icon: def.displayProperties.icon ? 'https://www.bungie.net'+def.displayProperties.icon : null,
+          type: def.milestoneType || 0,
+          endDate: ms[hash].endDate ? new Date(ms[hash].endDate) : null,
+          rewardItemHashes: rewardItemHashes.slice(0,4),
+          order: def.milestoneType===3?0:def.milestoneType===4?1:2,
+        });
+      } catch(e){}
+    }));
+    body.innerHTML = '';
+
+    // Event bar (Trials weekend + any Iron Banner/Trials milestone active)
+    const events = [];
+    if(isTrialsWeekend()) events.push({label:`Trials of Osiris \u2014 ends in ${fmtCountdown(trialsEnds())}`, cls:'trials'});
+    cards.forEach(c=>{
+      const n = c.name.toLowerCase();
+      if(n.includes('iron banner')) events.push({label:`Iron Banner \u2014 active${c.endDate?` \u2022 ends in ${fmtCountdown(c.endDate)}`:''}`, cls:'iron'});
+      else if(n.includes('trials') && !isTrialsWeekend()) events.push({label:`Trials of Osiris \u2014 ${c.name}`, cls:'trials'});
+    });
+    if(events.length){
+      const bar = el('div','eventBar');
+      // de-dupe by label
+      [...new Map(events.map(e=>[e.label,e])).values()].forEach(ev=>{
+        bar.appendChild(el('div','eventPill '+(ev.cls||''), `&#9733; ${ev.label}`));
+      });
+      body.appendChild(bar);
+    }
+
+    // Reset chips
+    const chips = el('div','resetChips');
+    chips.innerHTML = `<div class="resetChip">Daily reset: <b>${fmtCountdown(nextDailyReset())}</b></div>
+      <div class="resetChip">Weekly reset (Tue): <b>${fmtCountdown(nextWeeklyReset())}</b></div>`;
+    body.appendChild(chips);
+
+    if(!cards.length){ body.appendChild(el('div','fsState','No active public milestones returned right now.')); return; }
+    cards.sort((a,b)=> a.order-b.order || a.name.localeCompare(b.name));
+    const grid = el('div','actGrid');
+    body.appendChild(grid);
+    cards.forEach(c=>grid.appendChild(buildActivityCard(c)));
+  } catch(err){
+    body.innerHTML=''; body.appendChild(el('div','fsState err','Could not load activities: '+err.message));
+  }
+}
+
+function buildActivityCard(c){
+  const card = el('div','actCard'); card.setAttribute('data-testid','activity-card');
+  const head = el('div','head');
+  if(c.icon){ const img=document.createElement('img'); img.src=c.icon; img.alt=c.name; head.appendChild(img); }
+  const mt = MILESTONE_TYPE[c.type] || {n:''};
+  head.appendChild(el('div','', `<div class="nm">${c.name}</div><div class="tag ${mt.cls||''}">${mt.n}${c.endDate?` \u2022 ends in ${fmtCountdown(c.endDate)}`:''}</div>`));
+  card.appendChild(head);
+  const bodyEl = el('div','body');
+  if(c.desc) bodyEl.appendChild(el('div','desc', c.desc));
+  if(c.rewardItemHashes.length){
+    bodyEl.appendChild(el('div','rwLabel','Rewards'));
+    c.rewardItemHashes.forEach(h=>{
+      const row = el('div','rw'); row.textContent='Loading...';
+      bodyEl.appendChild(row);
+      getItemDefinition(h).then(def=>{
+        row.textContent='';
+        if(def.icon){ const im=document.createElement('img'); im.src=def.icon; row.appendChild(im); }
+        row.appendChild(el('span','', def.name));
+      }).catch(()=>{ row.textContent=''; });
+    });
+  }
+  card.appendChild(bodyEl);
+  return card;
+}
+
+/* ---------------- VENDORS WINDOW ---------------- */
+const vendorsOverlay = document.getElementById('vendorsOverlay');
+const vendorsState = { data:null, search:'' };
+// Notable vendors to surface (others hidden to cut noise). Falls back to all
+// selling vendors if none of these are present.
+const NOTABLE_VENDORS = {
+  2190858386:'X\u00fbr', 672118013:'Banshee-44', 350061650:'Ada-1',
+  2255782930:'Rahool', 765357505:'Saint-14', 396892126:'Devrim Kay',
+  3603221665:'Commander Zavala', 69482069:'Lord Shaxx', 248695599:'The Drifter',
+};
+function openVendorsWindow(){
+  closeAllOverlays();
+  vendorsOverlay.classList.add('open');
+  document.body.style.overflow='hidden';
+  if(!vendorsState.data) loadVendors(); else renderVendors();
+}
+function closeVendorsWindow(){ vendorsOverlay.classList.remove('open'); document.body.style.overflow=''; }
+
+async function loadVendors(){
+  const body = document.getElementById('vendorsBody');
+  body.innerHTML=''; body.appendChild(el('div','fsState','Resolving your signed-in account...'));
+  try {
+    const auth = await getValidAccessToken();
+    if(!auth) throw new Error('Not signed in. Open the menu \u2192 Sign in with Bungie.net first. Vendor data needs the ReadDestinyVendorsAndAdvisors permission (you may be asked to re-authorize once). Sign-in only works on the deployed GitHub Pages site.');
+    const m = await getMembershipsForCurrentUser(auth.access_token);
+    body.innerHTML=''; body.appendChild(el('div','fsState','Loading character...'));
+    const profile = await bungieGet(`/Destiny2/${m.membershipType}/Profile/${m.membershipId}/?components=200`);
+    const charId = Object.keys(profile.characters?.data || {})[0];
+    if(!charId) throw new Error('No characters found on this account.');
+    body.innerHTML=''; body.appendChild(el('div','fsState','Fetching live vendor sales...'));
+    const res = await fetch(`${BUNGIE_BASE}/Destiny2/${m.membershipType}/Profile/${m.membershipId}/Character/${charId}/Vendors/?components=400,402`, {
+      headers: { 'X-API-Key': BUNGIE_API_KEY, 'Authorization':'Bearer '+auth.access_token },
+    }).then(r=>r.json());
+    const parsed = handleBungieJson(res);
+    const vendorsMeta = parsed.vendors?.data || {};
+    const salesData = parsed.sales?.data || {};
+    // Build a list of vendors that have sale items.
+    let vendorHashes = Object.keys(salesData).filter(h=>Object.keys(salesData[h].saleItems||{}).length);
+    const notable = vendorHashes.filter(h=>NOTABLE_VENDORS[h]);
+    if(notable.length) vendorHashes = notable;
+    const vendors = [];
+    await Promise.all(vendorHashes.map(async (vhash)=>{
+      try {
+        const vdef = await getManifestEntity('DestinyVendorDefinition', vhash);
+        const name = vdef?.displayProperties?.name || NOTABLE_VENDORS[vhash] || 'Vendor';
+        const icon = vdef?.displayProperties?.icon ? 'https://www.bungie.net'+vdef.displayProperties.icon : null;
+        const sales = Object.values(salesData[vhash].saleItems||{}).slice(0,40);
+        const items = await Promise.all(sales.map(async (s)=>{
+          const def = await getItemDefinition(s.itemHash).catch(()=>null);
+          if(!def) return null;
+          const costs = await Promise.all((s.costs||[]).filter(c=>c.itemHash).map(async c=>{
+            const cd = await getItemDefinition(c.itemHash).catch(()=>null);
+            return cd ? {name:cd.name, icon:cd.icon, qty:c.quantity} : {name:'', icon:null, qty:c.quantity};
+          }));
+          return {def, costs};
+        }));
+        vendors.push({vhash, name, icon, nextRefresh: vendorsMeta[vhash]?.nextRefreshDate, items: items.filter(Boolean)});
+      } catch(e){}
+    }));
+    vendors.sort((a,b)=>a.name.localeCompare(b.name));
+    vendorsState.data = vendors;
+    renderVendors();
+  } catch(err){
+    body.innerHTML=''; body.appendChild(el('div','fsState err','Could not load vendors: '+err.message));
+  }
+}
+
+function renderVendors(){
+  const body = document.getElementById('vendorsBody');
+  body.innerHTML='';
+  document.getElementById('vendorsReset').textContent = `Sales refresh at daily/weekly reset \u2022 next daily in ${fmtCountdown(nextDailyReset())}`;
+  if(isTrialsWeekend()){
+    const bar = el('div','eventBar');
+    bar.appendChild(el('div','eventPill trials', `&#9733; Trials of Osiris live \u2014 Saint-14 has weekend rewards (ends in ${fmtCountdown(trialsEnds())})`));
+    body.appendChild(bar);
+  }
+  const q = vendorsState.search.toLowerCase();
+  let shownVendors = 0;
+  (vendorsState.data||[]).forEach(v=>{
+    const items = q ? v.items.filter(it=>it.def.name.toLowerCase().includes(q)) : v.items;
+    if(!items.length) return;
+    shownVendors++;
+    const sec = el('div','venVendor');
+    const head = el('div','venHead');
+    if(v.icon){ const img=document.createElement('img'); img.src=v.icon; head.appendChild(img); }
+    head.appendChild(el('div','', `<div class="nm">${v.name}</div><div class="sub">${items.length} item${items.length===1?'':'s'} for sale${v.nextRefresh?` \u2022 refreshes ${new Date(v.nextRefresh).toLocaleDateString()}`:''}</div>`));
+    sec.appendChild(head);
+    const grid = el('div','venItems');
+    items.forEach(it=>{
+      const cell = el('div','venItem'); cell.setAttribute('data-testid','vendor-item');
+      if(it.def.tierType===6) cell.classList.add('exotic');
+      if(it.def.icon){ const im=document.createElement('img'); im.className='ic'; im.src=it.def.icon; im.loading='lazy'; cell.appendChild(im); }
+      const info = el('div','');
+      info.appendChild(el('div','nm', it.def.name));
+      if(it.def.typeName) info.appendChild(el('div','typ', it.def.typeName));
+      it.costs.forEach(c=>{
+        const cr = el('div','cost');
+        if(c.icon){ const ci=document.createElement('img'); ci.src=c.icon; cr.appendChild(ci); }
+        cr.appendChild(el('span','', `${c.qty} ${c.name}`));
+        info.appendChild(cr);
+      });
+      cell.appendChild(info);
+      grid.appendChild(cell);
+    });
+    sec.appendChild(grid);
+    body.appendChild(sec);
+  });
+  if(!shownVendors) body.appendChild(el('div','fsState', q?'No vendor items match your search.':'No vendor sales available right now.'));
+}
+
+// Wire Phase 3 controls
+document.getElementById('activitiesCloseBtn').onclick = closeActivitiesWindow;
+document.getElementById('activitiesReloadBtn').onclick = loadActivities;
+document.getElementById('vendorsCloseBtn').onclick = closeVendorsWindow;
+document.getElementById('vendorsReloadBtn').onclick = ()=>{ vendorsState.data=null; loadVendors(); };
+document.getElementById('vendorsSearch').addEventListener('input', (e)=>{ vendorsState.search = e.target.value.trim(); if(vendorsState.data) renderVendors(); });
+document.addEventListener('keydown', (e)=>{
+  if(e.key!=='Escape') return;
+  if(activitiesOverlay.classList.contains('open')) closeActivitiesWindow();
+  if(vendorsOverlay.classList.contains('open')) closeVendorsWindow();
+});
 
 render();
 
