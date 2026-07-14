@@ -2217,13 +2217,15 @@ const state = {
   artifact: null,
   artifactPerks: [], // up to 7 names total across column1/2/3, gated by progression
   armorSetByPiece: {Helmet:null,Arms:null,Chest:null,Legs:null,ClassItem:null}, // each of the 5 pieces can be socketed with a different set's bonus
-  // Armor 3.0 masterwork: fully masterworking a piece grants +5 to each of
-  // the 3 stats NOT its primary/secondary/tertiary roll. Since real per-item
-  // stat rolls aren't modeled, you pick which 3 stats benefit per piece —
-  // matching what your actual roll's weak stats would be.
+  // Armor 3.0 tier per piece (1-5). Tier 4 & 5 have 11 mod energy; T1-3 have
+  // 10. Tier 5 also unlocks the stat-tuning slot (tuning costs 0 energy).
+  armorTier: {Helmet:5, Arms:5, Chest:5, Legs:5, ClassItem:5},
+  // Armor 3.0 masterwork: masterworking a piece raises its 3 lowest stats by
+  // +1 per level, up to +5 each at level 5 (it NO LONGER affects mod energy).
+  // Real per-item rolls aren't modeled, so you pick which 3 stats benefit.
   armorMasterwork: {
-    Helmet: {on:false, stats:[]}, Arms: {on:false, stats:[]}, Chest: {on:false, stats:[]},
-    Legs: {on:false, stats:[]}, ClassItem: {on:false, stats:[]},
+    Helmet: {level:5, stats:[]}, Arms: {level:5, stats:[]}, Chest: {level:5, stats:[]},
+    Legs: {level:5, stats:[]}, ClassItem: {level:5, stats:[]},
   },
 };
 
@@ -2245,7 +2247,8 @@ function resetState(){
   state.tuning={Helmet:null,Arms:null,Chest:null,Legs:null,ClassItem:null};
   state.artifact=null; state.artifactPerks=[];
   state.armorSetByPiece={Helmet:null,Arms:null,Chest:null,Legs:null,ClassItem:null};
-  state.armorMasterwork={Helmet:{on:false,stats:[]},Arms:{on:false,stats:[]},Chest:{on:false,stats:[]},Legs:{on:false,stats:[]},ClassItem:{on:false,stats:[]}};
+  state.armorTier={Helmet:5,Arms:5,Chest:5,Legs:5,ClassItem:5};
+  state.armorMasterwork={Helmet:{level:5,stats:[]},Arms:{level:5,stats:[]},Chest:{level:5,stats:[]},Legs:{level:5,stats:[]},ClassItem:{level:5,stats:[]}};
   render();
 }
 
@@ -2403,13 +2406,15 @@ function computeCharacterStats(){
   // this piece's "weak" stats — real armor gives this to whichever 3 stats
   // aren't its primary/secondary/tertiary roll, which isn't data this tool
   // has per real item, so you choose which 3 apply.
+  // Armor 3.0 masterwork: raises the (up to 3) stats you've marked as this
+  // piece's lowest stats by +1 per masterwork level (max +5 each at level 5).
   ["Helmet","Arms","Chest","Legs","ClassItem"].forEach(slotName=>{
     const mw = state.armorMasterwork[slotName];
-    if(!mw || !mw.on) return;
+    if(!mw || !mw.level) return;
     mw.stats.forEach(stat=>{
       if(totals[stat]===undefined) return;
-      totals[stat]+=5;
-      contributors[stat].push({source:`${slotName} masterwork`, value:5});
+      totals[stat]+=mw.level;
+      contributors[stat].push({source:`${slotName} masterwork (T${mw.level})`, value:mw.level});
     });
   });
   return {totals, contributors};
@@ -2957,6 +2962,23 @@ function renderBuilder(){
     const chosen = state.mods[slotName]||[];
     wrap.appendChild(el('div','', `<div style="font-size:12px;color:var(--gold);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">${slotDisplayNames[slotName]}</div>`));
 
+    // Armor 3.0 tier (1-5). Tier 4 & 5 have 11 mod energy; T1-3 have 10.
+    // Tier 5 also unlocks the stat-tuning slot.
+    const tier = state.armorTier[slotName] || 5;
+    const tierRow = el('div','slotrow');
+    tierRow.style.marginBottom="8px";
+    tierRow.appendChild(el('label','','Tier'));
+    const tierSel = el('select');
+    [1,2,3,4,5].forEach(tv=>{
+      const o=document.createElement('option'); o.value=String(tv);
+      o.textContent = `Tier ${tv} — ${tv>=4?11:10} energy${tv===5?' + tuning slot':''}`;
+      if(tier===tv) o.selected=true;
+      tierSel.appendChild(o);
+    });
+    tierSel.onchange=()=>{ state.armorTier[slotName] = parseInt(tierSel.value,10); render(); };
+    tierRow.appendChild(tierSel);
+    wrap.appendChild(tierRow);
+
     for(let i=0;i<4;i++){
       const slotRow = el('div','slotrow');
       slotRow.style.marginBottom="6px";
@@ -2990,8 +3012,8 @@ function renderBuilder(){
       }
     }
 
-    // Armor 3.0 energy budget: a fully-tiered/masterworked piece has 10 energy.
-    const ARMOR_ENERGY_CAP = 10;
+    // Armor 3.0 energy budget: Tier 4 & 5 pieces have 11 energy, else 10.
+    const ARMOR_ENERGY_CAP = tier >= 4 ? 11 : 10;
     const usedEnergy = (state.mods[slotName]||[]).reduce((sum,name)=>{
       const m = ARMOR_MODS_BY_SLOT[slotName].find(x=>x.name===name);
       return sum + (m ? (m.energy||0) : 0);
@@ -3001,57 +3023,66 @@ function renderBuilder(){
     energyRow.style.margin="6px 0 2px";
     wrap.appendChild(energyRow);
 
-    const tuneSel = el('select');
-    tuneSel.style.marginTop="8px";
-    const noneTuneOpt = document.createElement('option'); noneTuneOpt.value=""; noneTuneOpt.textContent="— no Tier 5 tuning —"; tuneSel.appendChild(noneTuneOpt);
-    TUNING_MODS_BY_SLOT[slotName].forEach(t=>{
-      const o=document.createElement('option'); o.value=t.name; o.textContent=t.name;
-      if(state.tuning[slotName]===t.name) o.selected=true;
-      tuneSel.appendChild(o);
-    });
-    tuneSel.onchange=()=>{ state.tuning[slotName] = tuneSel.value || null; render(); };
-    wrap.appendChild(tuneSel);
-
-    const chosenTune = TUNING_MODS_BY_SLOT[slotName].find(t=>t.name===state.tuning[slotName]);
-    if(chosenTune){
-      const tdesc = chosenTune.effects.map(e=>BUCKETS.find(b=>b.id===e.bucket).name+' '+(e.value>=0?'+':'')+e.value+'%').join(', ');
-      const tnote = el('div','empty-note', tdesc);
-      tnote.style.margin="4px 0 0";
-      wrap.appendChild(tnote);
+    // Stat-tuning slot is Tier 5 only, and costs 0 mod energy.
+    if(tier >= 5){
+      const tuneSel = el('select');
+      tuneSel.style.marginTop="8px";
+      const noneTuneOpt = document.createElement('option'); noneTuneOpt.value=""; noneTuneOpt.textContent="— no tuning (0 energy) —"; tuneSel.appendChild(noneTuneOpt);
+      TUNING_MODS_BY_SLOT[slotName].forEach(t=>{
+        const o=document.createElement('option'); o.value=t.name; o.textContent=t.name;
+        if(state.tuning[slotName]===t.name) o.selected=true;
+        tuneSel.appendChild(o);
+      });
+      tuneSel.onchange=()=>{ state.tuning[slotName] = tuneSel.value || null; render(); };
+      wrap.appendChild(tuneSel);
+      const chosenTune = TUNING_MODS_BY_SLOT[slotName].find(t=>t.name===state.tuning[slotName]);
+      if(chosenTune){
+        const tdesc = chosenTune.effects.map(e=>BUCKETS.find(b=>b.id===e.bucket).name+' '+(e.value>=0?'+':'')+e.value+'%').join(', ');
+        const tnote = el('div','empty-note', tdesc);
+        tnote.style.margin="4px 0 0";
+        wrap.appendChild(tnote);
+      }
+    } else {
+      if(state.tuning[slotName]){ state.tuning[slotName] = null; } // clear tuning if tier dropped below 5
+      const noTune = el('div','empty-note', 'Stat-tuning slot unlocks at Tier 5.');
+      noTune.style.marginTop="8px";
+      wrap.appendChild(noTune);
     }
 
-    // Armor 3.0 Masterwork — real mechanic gives +5 to each of the 3 stats
-    // that AREN'T this piece's primary/secondary/tertiary roll. Since actual
-    // per-item stat rolls aren't modeled, pick which 3 stats benefit here.
-    const mwRow = el('div','');
+    // Armor 3.0 Masterwork — raises this piece's 3 lowest stats by +1 per
+    // level (max +5 each at level 5). No longer affects mod energy. Real
+    // per-item rolls aren't modeled, so pick which 3 stats benefit here.
+    const mwState = state.armorMasterwork[slotName];
+    const mwRow = el('div','slotrow');
     mwRow.style.marginTop = '10px';
-    const mwLabel = document.createElement('label');
-    mwLabel.style.display = 'flex'; mwLabel.style.alignItems = 'center'; mwLabel.style.gap = '6px'; mwLabel.style.cursor = 'pointer';
-    const mwCheckbox = document.createElement('input');
-    mwCheckbox.type = 'checkbox';
-    mwCheckbox.checked = state.armorMasterwork[slotName].on;
-    mwCheckbox.onchange = ()=>{ state.armorMasterwork[slotName].on = mwCheckbox.checked; render(); };
-    mwLabel.appendChild(mwCheckbox);
-    mwLabel.appendChild(document.createTextNode('Masterworked (+5 to 3 chosen stats)'));
-    mwRow.appendChild(mwLabel);
+    mwRow.appendChild(el('label','','Masterwork'));
+    const mwSel = el('select');
+    [0,1,2,3,4,5].forEach(lv=>{
+      const o=document.createElement('option'); o.value=String(lv);
+      o.textContent = lv===0 ? 'Not masterworked' : `Level ${lv} (+${lv} to 3 stats)`;
+      if(mwState.level===lv) o.selected=true;
+      mwSel.appendChild(o);
+    });
+    mwSel.onchange = ()=>{ mwState.level = parseInt(mwSel.value,10); render(); };
+    mwRow.appendChild(mwSel);
     wrap.appendChild(mwRow);
-    if(state.armorMasterwork[slotName].on){
+    if(mwState.level > 0){
       const statPickRow = el('div','');
       statPickRow.style.display = 'flex'; statPickRow.style.flexWrap = 'wrap'; statPickRow.style.gap = '8px'; statPickRow.style.marginTop = '6px';
       STAT_NAMES.forEach(stat=>{
-        const chosen = state.armorMasterwork[slotName].stats.includes(stat);
+        const isChosen = mwState.stats.includes(stat);
         const statLabel = document.createElement('label');
         statLabel.style.display = 'flex'; statLabel.style.alignItems = 'center'; statLabel.style.gap = '4px'; statLabel.style.fontSize = '12px'; statLabel.style.cursor = 'pointer';
         const cb = document.createElement('input');
         cb.type = 'checkbox';
-        cb.checked = chosen;
+        cb.checked = isChosen;
         cb.onchange = ()=>{
-          const arr = state.armorMasterwork[slotName].stats;
+          const arr = mwState.stats;
           if(cb.checked){
             if(arr.length >= 3){ cb.checked = false; return; } // real mechanic caps at 3 stats per piece
             arr.push(stat);
           } else {
-            state.armorMasterwork[slotName].stats = arr.filter(s=>s!==stat);
+            mwState.stats = arr.filter(s=>s!==stat);
           }
           render();
         };
@@ -3060,8 +3091,8 @@ function renderBuilder(){
         statPickRow.appendChild(statLabel);
       });
       wrap.appendChild(statPickRow);
-      if(state.armorMasterwork[slotName].stats.length < 3){
-        const capNote = el('div','empty-note', `${3 - state.armorMasterwork[slotName].stats.length} more stat${3 - state.armorMasterwork[slotName].stats.length===1?'':'s'} to pick (real armor always benefits exactly 3).`);
+      if(mwState.stats.length < 3){
+        const capNote = el('div','empty-note', `${3 - mwState.stats.length} more stat${3 - mwState.stats.length===1?'':'s'} to pick (real armor always benefits exactly 3).`);
         capNote.style.marginTop = '4px';
         wrap.appendChild(capNote);
       }
@@ -4038,10 +4069,10 @@ function renderSyncPanel(){
   const col = document.getElementById('syncCol');
   col.innerHTML = "";
 
-  // ---- Full-Screen Vault view (opens the DIM/Ishtar-style window) ----
+  // ---- My Vault — opens the DIM/Ishtar-style full-screen vault window ----
   const vaultViewRow = el('div','drawerRow');
   vaultViewRow.setAttribute('data-testid','open-fullscreen-vault-row');
-  vaultViewRow.appendChild(el('span','rowLabel','Full-Screen Vault'));
+  vaultViewRow.appendChild(el('span','rowLabel','My Vault'));
   vaultViewRow.appendChild(el('span','rowChev','&#10095;'));
   vaultViewRow.onclick = ()=>{ closeDrawer(); openFullScreenVault(); };
   col.appendChild(vaultViewRow);
@@ -4126,31 +4157,6 @@ function renderSyncPanel(){
     resultsHolder.id = 'syncResultsHolder';
     body.appendChild(resultsHolder);
     col.appendChild(body);
-  }
-
-  // ---- My Vault — its own distinct row, separate from Sign In/Look Up ----
-  const vaultRow = el('div','drawerRow');
-  vaultRow.appendChild(el('span','rowLabel','My Vault'));
-  vaultRow.appendChild(el('span','rowChev'+(drawerAccordionOpen.vault?' open':''), '&#10095;'));
-  vaultRow.onclick = ()=>{ drawerAccordionOpen.vault = !drawerAccordionOpen.vault; renderSyncPanel(); };
-  col.appendChild(vaultRow);
-  if(drawerAccordionOpen.vault){
-    const vaultBody = el('div','drawerAccordionBody');
-    const vaultAuth = getStoredAuth();
-    const vaultStillValid = vaultAuth && vaultAuth.refreshTokenExpires && Date.now() < vaultAuth.refreshTokenExpires;
-    if(!vaultStillValid){
-      vaultBody.appendChild(el('div','empty-note', 'Sign in above first \u2014 viewing and moving vault items needs your authenticated session.'));
-    } else {
-      const loadBtn = document.createElement('button');
-      loadBtn.textContent = 'Load My Vault';
-      loadBtn.className = 'reset';
-      loadBtn.onclick = (e)=>{ e.stopPropagation(); renderMyVault(); };
-      vaultBody.appendChild(loadBtn);
-      const vaultResultsHolder = el('div','','');
-      vaultResultsHolder.id = 'vaultResultsHolder';
-      vaultBody.appendChild(vaultResultsHolder);
-    }
-    col.appendChild(vaultBody);
   }
 
   // ---- Jump to Section — plain stacked list rows, dbrand-menu style ----
