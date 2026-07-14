@@ -2276,6 +2276,7 @@ const state = {
   grenade: null, // name
   melee: null, // name
   exoticArmor: null,
+  exoticTuning: null,
   classItemPerks: {col1:null, col2:null}, // Prismatic-only exotic class item perk picks
   armorFilter: "synergy", // "synergy" = only show pieces matching current element + Any; "all" = show everything
   exoticWeaponSlot: {Kinetic:null, Energy:null, Power:null}, // only one exotic weapon equippable at a time really; we allow pick of one
@@ -2309,7 +2310,7 @@ function resetState(){
   state.cls="Titan"; state.element="Solar"; state.aspects=[]; state.fragments=[];
   state.grenade=null; state.melee=null;
   state.super = defaultSuperFor(state.cls, state.element);
-  state.exoticArmor=null; state.activeExoticWeapon=null; state.armorFilter="synergy";
+  state.exoticArmor=null; state.exoticTuning=null; state.activeExoticWeapon=null; state.armorFilter="synergy";
   state.exoticWeaponFilter={Kinetic:"all",Energy:"all",Power:"all"};
   state.classItemPerks={col1:null,col2:null};
   state.legendary={Kinetic:null,Energy:null,Power:null};
@@ -2357,6 +2358,10 @@ function collectComponents(){
         if(p1) comps.push({source:`${ea.name} — ${p1.name}`, grants:p1.grants, effects:p1.effects});
         if(p2) comps.push({source:`${ea.name} — ${p2.name}`, grants:p2.grants, effects:p2.effects});
       }
+    }
+    if(state.exoticTuning){
+      const et = EXOTIC_TUNING_OPTIONS.find(t=>t.name===state.exoticTuning);
+      if(et && et.effects && et.effects.length) comps.push({source:`Exotic Tuning: ${et.name}`, grants:[], effects:et.effects});
     }
   }
   if(state.activeExoticWeapon){
@@ -2459,6 +2464,27 @@ function parseTuningStatDeltas(name){
   }
   return deltas;
 }
+
+// Exotic Armor Tuning (Armor 3.0) — every Exotic armor piece can equip any
+// tuning option: a Balanced tune plus the full matrix of +5/-5 stat swaps
+// across all six stats. Names are parsed by parseTuningStatDeltas() for the
+// stat readout; effects[] feed the synergy engine (Weapons has no synergy
+// bucket so it only affects the stat totals, not synergy).
+const STAT_BUCKET = {Class:"classEnergy", Grenade:"grenadeEnergy", Super:"superEnergy", Melee:"meleeEnergy", Health:"healing"};
+const EXOTIC_TUNING_OPTIONS = (function(){
+  const opts = [{name:"Balanced Tuning (+2 Weapons/Health/Class)", effects:[{bucket:"healing",value:2,note:"balanced spread"},{bucket:"classEnergy",value:2,note:"balanced spread"}]}];
+  STAT_NAMES.forEach(gain=>{
+    STAT_NAMES.forEach(lose=>{
+      if(gain===lose) return;
+      const effects = [];
+      if(STAT_BUCKET[gain]) effects.push({bucket:STAT_BUCKET[gain], value:4, note:`+5 ${gain}`});
+      if(STAT_BUCKET[lose]) effects.push({bucket:STAT_BUCKET[lose], value:-4, note:`-5 ${lose}`});
+      opts.push({name:`+5 ${gain} / -5 ${lose}`, effects});
+    });
+  });
+  return opts;
+})();
+
 function computeCharacterStats(){
   const totals = {}; STAT_NAMES.forEach(s=>totals[s]=0);
   const contributors = {}; STAT_NAMES.forEach(s=>contributors[s]=[]);
@@ -2472,6 +2498,15 @@ function computeCharacterStats(){
       contributors[stat].push({source:`${slotName} tuning`, value:val});
     });
   });
+  // Exotic armor tuning (applies once, not per slot).
+  if(state.exoticTuning){
+    const deltas = parseTuningStatDeltas(state.exoticTuning);
+    Object.entries(deltas).forEach(([stat,val])=>{
+      if(totals[stat]===undefined) return;
+      totals[stat]+=val;
+      contributors[stat].push({source:'Exotic tuning', value:val});
+    });
+  }
   // Armor 3.0 masterwork: +5 to each of the (up to 3) stats you've marked as
   // this piece's "weak" stats — real armor gives this to whichever 3 stats
   // aren't its primary/secondary/tertiary roll, which isn't data this tool
@@ -2547,7 +2582,7 @@ function makePanel(id, headerHTML){
 function clearPanel(id){
   switch(id){
     case 'p1': state.aspects=[]; state.fragments=[]; state.grenade=null; state.melee=null; state.super=defaultSuperFor(state.cls,state.element); break;
-    case 'p2': state.exoticArmor=null; state.classItemPerks={col1:null,col2:null}; break;
+    case 'p2': state.exoticArmor=null; state.exoticTuning=null; state.classItemPerks={col1:null,col2:null}; break;
     case 'p3': state.activeExoticWeapon=null; break;
     case 'p4': state.legendary={Kinetic:null,Energy:null,Power:null}; break;
     case 'p5': state.mods={Helmet:[],Arms:[],Chest:[],Legs:[],ClassItem:[]}; state.tuning={Helmet:null,Arms:null,Chest:null,Legs:null,ClassItem:null}; break;
@@ -2576,7 +2611,7 @@ function renderBuilder(){
   ["Titan","Hunter","Warlock"].forEach(c=>{
     const o=document.createElement('option'); o.value=c; o.textContent=c; if(c===state.cls) o.selected=true; clsSel.appendChild(o);
   });
-  clsSel.onchange = ()=>{ state.cls=clsSel.value; state.aspects=[]; state.exoticArmor=null; state.classItemPerks={col1:null,col2:null}; state.super=defaultSuperFor(state.cls,state.element); state.melee=null; render(); };
+  clsSel.onchange = ()=>{ state.cls=clsSel.value; state.aspects=[]; state.exoticArmor=null; state.exoticTuning=null; state.classItemPerks={col1:null,col2:null}; state.super=defaultSuperFor(state.cls,state.element); state.melee=null; render(); };
   clsRow.appendChild(clsSel);
   p1.appendChild(clsRow);
 
@@ -2821,6 +2856,35 @@ function renderBuilder(){
       d2.style.margin='2px 0 8px'; d2.style.marginLeft='86px';
       p2.appendChild(d2);
     }
+  }
+
+  // Exotic Armor Tuning — every Exotic armor piece can equip any tuning option.
+  if(chosenArmor){
+    const tuneWrap = el('div','');
+    tuneWrap.style.marginTop = '10px';
+    tuneWrap.appendChild(el('div','', `<div style="font-size:11px;color:var(--gold);margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">Exotic Tuning</div>`));
+    const etRow = el('div','slotrow');
+    etRow.appendChild(el('label','','Tuning'));
+    const etSel = el('select');
+    etSel.setAttribute('data-testid','exotic-tuning-select');
+    const noneEt = document.createElement('option'); noneEt.value=""; noneEt.textContent="— no tuning —"; etSel.appendChild(noneEt);
+    EXOTIC_TUNING_OPTIONS.forEach(t=>{
+      const o=document.createElement('option'); o.value=t.name; o.textContent=t.name;
+      if(state.exoticTuning===t.name) o.selected=true;
+      etSel.appendChild(o);
+    });
+    etSel.onchange=()=>{ state.exoticTuning = etSel.value || null; render(); };
+    etRow.appendChild(etSel);
+    tuneWrap.appendChild(etRow);
+    const chosenEt = EXOTIC_TUNING_OPTIONS.find(t=>t.name===state.exoticTuning);
+    if(chosenEt){
+      const deltas = parseTuningStatDeltas(chosenEt.name);
+      const dtxt = Object.entries(deltas).map(([s,v])=>`${v>=0?'+':''}${v} ${s}`).join(', ') || 'balanced';
+      const etNote = el('div','empty-note', `Stat change: ${dtxt}`);
+      etNote.style.margin='4px 0 0'; etNote.style.marginLeft='86px';
+      tuneWrap.appendChild(etNote);
+    }
+    p2.appendChild(tuneWrap);
   }
 
   if(!isPrismatic){
