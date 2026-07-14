@@ -4643,9 +4643,16 @@ const MILESTONE_TYPE = {1:{n:'Tutorial'},2:{n:'One Time'},3:{n:'Weekly',cls:'tag
 async function loadActivities(){
   const body = document.getElementById('activitiesBody');
   body.innerHTML = '';
-  body.appendChild(el('div','fsState','Fetching public milestones from Bungie.net...'));
   document.getElementById('activitiesReset').textContent =
     `Daily reset in ${fmtCountdown(nextDailyReset())} \u2022 Weekly reset (Tue) in ${fmtCountdown(nextWeeklyReset())}`;
+  // Reset chips render first so the countdowns stay visible even if the
+  // milestones API errors out.
+  const chips = el('div','resetChips');
+  chips.innerHTML = `<div class="resetChip">Daily reset: <b>${fmtCountdown(nextDailyReset())}</b></div>
+    <div class="resetChip">Weekly reset (Tue): <b>${fmtCountdown(nextWeeklyReset())}</b></div>`;
+  body.appendChild(chips);
+  const loading = el('div','fsState','Fetching public milestones from Bungie.net...');
+  body.appendChild(loading);
   try {
     const ms = await bungieGet('/Destiny2/Milestones/');
     const entries = Object.keys(ms);
@@ -4675,7 +4682,7 @@ async function loadActivities(){
         });
       } catch(e){}
     }));
-    body.innerHTML = '';
+    loading.remove();
 
     // Event bar (Trials weekend + any Iron Banner/Trials milestone active)
     const events = [];
@@ -4691,14 +4698,8 @@ async function loadActivities(){
       [...new Map(events.map(e=>[e.label,e])).values()].forEach(ev=>{
         bar.appendChild(el('div','eventPill '+(ev.cls||''), `&#9733; ${ev.label}`));
       });
-      body.appendChild(bar);
+      body.insertBefore(bar, chips); // event bar sits above the reset chips
     }
-
-    // Reset chips
-    const chips = el('div','resetChips');
-    chips.innerHTML = `<div class="resetChip">Daily reset: <b>${fmtCountdown(nextDailyReset())}</b></div>
-      <div class="resetChip">Weekly reset (Tue): <b>${fmtCountdown(nextWeeklyReset())}</b></div>`;
-    body.appendChild(chips);
 
     if(!cards.length){ body.appendChild(el('div','fsState','No active public milestones returned right now.')); return; }
     cards.sort((a,b)=> a.order-b.order || a.name.localeCompare(b.name));
@@ -4706,7 +4707,8 @@ async function loadActivities(){
     body.appendChild(grid);
     cards.forEach(c=>grid.appendChild(buildActivityCard(c)));
   } catch(err){
-    body.innerHTML=''; body.appendChild(el('div','fsState err','Could not load activities: '+err.message));
+    loading.textContent = 'Could not load activities: '+err.message;
+    loading.className = 'fsState err';
   }
 }
 
